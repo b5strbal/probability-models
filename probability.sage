@@ -1,8 +1,69 @@
+#*****************************************************************************
+#       Copyright (C) 2014 Balazs Strenner <strenner@math.wisc.edu>,
+#
+#  Distributed under the terms of the GNU General Public License (GPL)
+#
+#    This code is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#    General Public License for more details.
+#
+#  The full text of the GPL is available at:
+#
+#                  http://www.gnu.org/licenses/
+#*****************************************************************************
+r"""
+Script for drawing Area and Tree Models of simple probability experiments.
+
+Each class and function is briefly documented. For examples, see the
+end of this file.
+
+"""
+
 from collections import namedtuple
 
-Happening = namedtuple('Happening', 'name, probability, next_happenings')
+Happening_ = namedtuple('Happening', 'name, probability, next_happenings')
+
+class Happening(Happening_):
+    """
+    A probabilistic happening.
+
+    The unusual name "happening" is used to avoid the more
+    natural English words "outcome" and "event" that mean something else
+    in the language of probability.
+
+    ATTRIBUTES:
+
+    - ``name`` -- the name of the happening
+    - ``probability`` -- the probability of the happening
+    - ``next_happenings`` -- the list of possible happenings following
+    this one.
+    """
+    pass
 
 def get_list_of_happenings(choices, repeats = 1, replacing = True):
+    """
+    Returns a list of possible happenings for randomly picking from a
+    set of choices.
+
+    INPUT:
+
+    - ``choices`` -- a list of choices or a string consisting of
+    letters encoding the choices
+
+    - ``repeats`` -- the number of times the picking is repeated
+
+    - ``replacing`` -- boolean, if True, the picked object is replaced
+    and can be picked in subsequent repeats, otherwise there are one
+    less choice is every subsequent repeat
+
+    OUTPUT:
+
+    - the list of first level happenings. If ``repeats`` was more than
+    one, then these first level happenings contain the second level
+    happenings in their ``next_happenings`` and so on.
+    
+    """
     if repeats == 0:
         return []
     if not isinstance(choices, (list, str)):
@@ -30,19 +91,39 @@ def get_list_of_happenings(choices, repeats = 1, replacing = True):
             index == choices.index(choices[index])]
 
 class Experiment:
+    """
+    A probability experiment.
+
+    INPUT:
+
+    - ``happenings`` -- the list first level happenings (which should
+    already contain the list of next happenings and those the next
+    ones, and so on, as a tree.
+    """
     def __init__(self, happenings):
         self._root = Happening("", 1, happenings)
 
     @property
     def root(self):
+        """
+        The root happening of the experiment.
+
+        The root does not have a name, its probability is 1, and its
+        next_happenings list contains the first-level happenings.
+        """
         return self._root
 
     @classmethod
     def picking(cls, choices, repeats = 1, replacing = True):
+        """
+        Constructs an Experiment for the common scenario that we
+        randomly pick from a set of choices.
+        """
         return Experiment(get_list_of_happenings(choices, repeats, 
             replacing))
 
 class AreaModel(SageObject):
+    """ Area model of an Experiment. """
     separator = ""
 
     def __init__(self, experiment):
@@ -50,6 +131,8 @@ class AreaModel(SageObject):
 
 
     def _latex_(self):
+        """ Returns the latex representation of the area model. """
+        
         fontsize = '\\footnotesize'
         latex.add_to_preamble('\\usepackage{tikz}')
         s = "\\begin{tikzpicture}[scale = 3]\n"
@@ -153,6 +236,14 @@ class AreaModel(SageObject):
 
 
     def _latex_old(self):
+        """ The older version of the _latex_ method.
+
+        This one doesn't use many foreach loops, so the tikz code gets
+        longer and some things take longer to customize, but
+        customization is more flexible than for the other _latex_
+        method.
+        """
+        
         fontsize = '\\footnotesize'
         latex.add_to_preamble('\\usepackage{tikz}')
         s = "\\begin{tikzpicture}[scale = 3]\n"
@@ -236,14 +327,19 @@ class AreaModel(SageObject):
 
          
 class TreeModel(SageObject):
+    """ Tree model of an Experiment. """
+    
     __level_distance = '1.5cm'
     __sibling_distances = ['2 cm', '1 cm', '0.5 cm']
+    
     def __init__(self, experiment, draw_labels = True):
         self._experiment = experiment
         self._draw_labels = draw_labels
 
     def _tikz_tree_of_happening_(self, happening, probability_so_far, 
             node_name_so_far, total_prob_string_list):
+        """ Recursively called method to generate tikz code. """
+        
         s = "\tchild[norm] {{node ({nodename}) [happening] {{{name}}}\n".\
                 format(name = happening.name, nodename = node_name_so_far)
         total_prob = probability_so_far * happening.probability
@@ -272,6 +368,8 @@ class TreeModel(SageObject):
         
 
     def _latex_(self):
+        """ Returns the LaTeX/TikZ representation of self. """
+        
         latex.add_to_preamble('\\usepackage{tikz}')
         latex.add_to_preamble('\\usetikzlibrary{positioning}')
         s = "\\begin{{tikzpicture}}[\n"\
@@ -347,8 +445,18 @@ h4 = Happening('0', 1/2, [])
 math132_1_4_4_b = Experiment([Happening('1',3/5,[h1,h2]),
     Happening('0',2/5,[h3,h4])])
 
+suits = ["$\diamondsuit$", "$\heartsuit$",
+                                    "$\spadesuit$", "$\clubsuit$"]
+math132_1_5_1 = Experiment.picking(suits)
+
+rank_haps = get_list_of_happenings(['A',
+                                '2','3','4','5','6','7','8','9','10','J','Q','K'])
+math132_1_5_1b = Experiment([Happening(suit,1/4,rank_haps) for suit in
+                                suits])
+
 math132_1_5_5 = Experiment.picking('123456', repeats = 2,
                                    replacing = True)
+
 math132_1_7_1 = Experiment.picking(['cherry', 'lemon', 'lemon'], repeats = 3)
 math132_1_7_2 = Experiment.picking('HT', repeats = 2)
 
